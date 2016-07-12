@@ -1,0 +1,405 @@
+---
+title:
+author: "fitz90"
+date: "June 2016"
+output:
+  html_document:
+    theme: yeti
+    toc: yes
+    toc_depth: 3
+    toc_float: yes
+  pdf_document:
+    toc: yes
+---
+
+### The effects of consumer pressure and water availability on plant interactions
+The stress gradient hypothesis original purposed the frequency of plant interactions along countervailing gradients of abiotic stress and consumer pressure. However, research to date has studied these two stressors in isolation rather than together, thereby potentially neglecting the interaction of these factors on plant composition. During an extreme drought and an above average rainfall year in the arid central valley of California, USA, we artificially manipulated a soil moisture gradient and erected animal exclosures to examine the interactions between dominant shrubs and the subordinate annual community. 
+There was a high frequency of positive interactions between shrubs and the annual community at all levels of soil moisture and consumer pressure. Shrub facilitation and water addition displayed similar effect sizes on plant communities, however, the shrub facilitation effect was significantly stronger in watered plots. Shrubs and positive interactions maintain productivity of annual plant communities at environmental extremes despite reductions in droughts stress or consumer pressure and these positive effects are even more pronounced with water addition. The relationship between consumer pressure and abiotic stress on plant interactions is non-linear, particularly since shrubs can facilitate understorey plants through a series of different mechanisms. 
+
+![](./sheeppanoche.JPG)
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+```
+
+``` {r echo=FALSE, message=FALSE, warning=FALSE}
+## load data
+
+data <- read.table("Gradient.data.2014_2016.csv", header=T, sep=",")
+data[is.na(data)] <- 0
+
+## load functions
+se <- function(x) sqrt(var(x)/length(x))
+error.bar <- function(x, y, upper, lower=upper, length=0,...){
+if(length(x) != length(y) | length(y) !=length(lower) | length(lower) != length(upper))
+stop("vectors must be same length")
+arrows(x,y+upper, x, y-lower, angle=90, code=3, length=length, ...)
+}
+rii <- function(x, j, var)
+{
+s1 <- subset(x, Microsite == "Shrub", select=var)
+o1 <- subset(x, Microsite == "Open", select=var)
+return1 <- (s1 - o1) / (s1+o1)
+x1 <- x[seq(1, nrow(x), by = 2),]
+return2 <- cbind(x1[j], return1)
+return2[is.na(return2)] <- 0
+return2
+}
+
+
+## load libraries
+library(MASS)
+library(lsmeans)
+```
+
+### Consumer pressure, soil moisture, and shrub interactions
+```{r echo=FALSE, message=FALSE, warning=FALSE, fig.width=10, fig.height=6} 
+## analyze data
+
+hist(data$Biomass)
+shapiro.test(data$Biomass) ## data not normal
+
+## run models with AOV compare residuals
+m1 <- aov(Biomass~Exclosure*Gradient*Microsite, data=subset(data, Year=="2014"))
+m2 <- aov(Biomass~Exclosure*Gradient*Microsite, data=subset(data, Year=="2016"))
+
+shapiro.test(m1$residuals) # p < 0.001
+shapiro.test(m2$residuals) # p < 0.001
+
+## boxcox transformation
+
+box1 <- boxcox(Biomass~Exclosure*SWC.initial*Microsite, data=subset(data, Year=="2014"))
+box2 <- boxcox(Biomass~Exclosure*as.factor(Gradient)*Microsite, data=subset(data, Year=="2016"))
+
+## extract lambda for 2014
+box2014 <- data.frame(cbind(box1$x,box1$y))
+colnames(box2014) <- c("x","y")
+box2014.y <- max(box2014[,"y"]) #extract optimal lambda y value
+lambda.vals <- box2014[box2014$y==box2014.y,] ## match with lambda value
+lambda <- lambda.vals[,1]
+
+##transform data ((x^λ)-1)/λ
+
+Biomass.trans <- ((subset(data, Year=="2014", Biomass)^lambda)-1)/lambda
+m1 <- aov(Biomass.trans~Exclosure*SWC.initial*Microsite, data=subset(data, Year=="2014"))
+Biomass2014 <- Biomass.trans
+
+## extract lambda for 2016
+box2016 <- data.frame(cbind(box2$x,box2$y))
+colnames(box2016) <- c("x","y")
+box2016.y <- max(box2016[,"y"]) #extract optimal lambda y value
+lambda.vals <- box2016[box2016$y==box2016.y,] ## match with lambda value
+lambda <- lambda.vals[,1]
+
+##transform data ((x^λ)-1)/λ
+
+Biomass.trans <- ((subset(data, Year=="2016", Biomass)^lambda)-1)/lambda
+m2 <- aov(Biomass.trans~Exclosure*SWC.initial*Microsite, data=subset(data, Year=="2016"))
+Biomass2016 <- Biomass.trans
+
+
+## interaction plots for exclosure by microsite
+Biomass.trans <-c(Biomass2014,Biomass2016) ## combine transformed data
+data[,"Biomass.trans"] <- Biomass.trans ##attached transformed data to dataset
+dat2014 <- subset(data, Year=="2014") # subset2014
+dat2016 <- subset(data, Year=="2016") # subset2016
+```
+
+### Consumer pressure effects on plant interactions
+```{r echo=FALSE, message=FALSE, warning=FALSE, fig.width=10, fig.height=6}
+## rii for exclosure vs microsite
+rii.dat <- rii(data, 2:10, 18:19)
+
+xax <- c(1.1,1.9)
+means.rii <- aggregate(rii.dat, by=list(Exclosure=rii.dat$Exclosure,Year=rii.dat$Year), mean)
+se.rii <- aggregate(rii.dat, by=list(Exclosure=rii.dat$Exclosure,Year=rii.dat$Year), se)
+
+par(mar=c(4.5,4.5,0.5,0.5))
+plot(xax+0.1, means.rii[means.rii$Exclosure=="N","Biomass"], ylab="RII biomass",xlab="Year", xaxt="n", xlim=c(0.8,2.2), ylim=c(-0.2,1.1), pch=21, bg="Black", cex=2, cex.axis=1.5, cex.lab=1.8)
+error.bar(xax+0.1, means.rii[means.rii$Exclosure=="N","Biomass"],se.rii[means.rii$Exclosure=="N","Biomass"]*2, lwd=2.5)
+axis(1, xax, c("2014","2016"), cex.axis=1.5)
+abline(h=0, lty=2, lwd=2)
+
+#plot(xax[1:2], means.rii[means.rii$Exclosure=="Y","Biomass"], ylab="RII biomass",xlab="Year", xaxt="n", xlim=c(0.8,2.2), ylim=c(-0.2,1), pch=21, bg="Grey60", cex=2, cex.axis=1.5, cex.lab=1.8)
+error.bar(xax-0.1, means.rii[means.rii$Exclosure=="Y","Biomass"],se.rii[means.rii$Exclosure=="Y","Biomass"]*2, lwd=2.5)
+points(xax-0.1, means.rii[means.rii$Exclosure=="Y","Biomass"], ylab="RII biomass", bg="Grey80", pch=21, cex=2)
+legend(1.78, 1.08, c("- consumers","+ consumers"), pch=21, pt.bg=c("Grey80","Black"), cex=1.3)
+
+
+## compare soil moisture with microsite
+shrub.2014 <- subset(dat2014, Microsite=="Shrub")
+open.2014 <- subset(dat2014, Microsite=="Open")
+shrub.2016 <- subset(dat2016, Microsite=="Shrub")
+open.2016 <- subset(dat2016, Microsite=="Open")
+```
+
+###Soil moisture effects on plant interactions
+```{r echo=FALSE, message=FALSE, warning=FALSE, fig.width=10, fig.height=6}
+## shrub and open with soil moisture
+
+box1 <- boxcox(Biomass~SWC.initial, data=shrub.2014)
+
+## extract lambda for 2014
+box2014 <- data.frame(cbind(box1$x,box1$y))
+colnames(box2014) <- c("x","y")
+box2014.y <- max(box2014[,"y"]) #extract optimal lambda y value
+lambda.vals <- box2014[box2014$y==box2014.y,] ## match with lambda value
+lambda <- lambda.vals[,1]
+
+Biomass.trans <- ((shrub.2014$Biomass^lambda)-1)/lambda
+m1 <- lm(Biomass.trans~SWC.initial, data=shrub.2014)
+
+box2 <- boxcox(Biomass~SWC.initial, data=open.2014)
+
+## extract lambda for 2014
+box2014 <- data.frame(cbind(box2$x,box2$y))
+colnames(box2014) <- c("x","y")
+box2014.y <- max(box2014[,"y"]) #extract optimal lambda y value
+lambda.vals <- box2014[box2014$y==box2014.y,] ## match with lambda value
+lambda <- lambda.vals[,1]
+
+Biomass.trans <- ((subset(data, Year=="2014", Biomass)^lambda)-1)/lambda
+m2 <- lm(Biomass.trans~SWC.initial, data=open.2014)
+
+par(mfrow=c(1,2))
+par(mar=c(4.5,4.5,0.5,0.5))
+plot(shrub.2014$SWC.initial, shrub.2014$Biomass.trans, ylim=c(-2,6), pch=19, xlim=c(8,50), ylab="transformed biomass", xlab="soil moisture (%)", cex.axis=1.5, cex.lab=1.8)
+points(open.2014$SWC.initial, open.2014$Biomass.trans, pch=21, bg="Grey80")
+#m3 <- lm(Biomass.trans~SWC.initial, data=shrub.2014)
+abline(m1, lwd=4)
+#m4 <- lm(Biomass.trans~SWC.initial, data=open.2014)
+abline(m2, lwd=4, col="Grey60")
+text(10,6, "2014", cex=1.5)
+
+## 2016
+
+box3 <- boxcox(Biomass~SWC.initial, data=shrub.2016, plotit=F)
+
+## extract lambda for 2014
+box2016 <- data.frame(cbind(box3$x,box3$y))
+colnames(box2016) <- c("x","y")
+box2016.y <- max(box2016[,"y"]) #extract optimal lambda y value
+lambda.vals <- box2016[box2016$y==box2016.y,] ## match with lambda value
+lambda <- lambda.vals[,1]
+
+Biomass.trans <- ((shrub.2016$Biomass^lambda)-1)/lambda
+m3 <- lm(Biomass.trans~SWC.initial, data=shrub.2016)
+
+box4 <- boxcox(Biomass~SWC.initial, data=open.2016, plotit=F)
+
+## extract lambda for 2014
+box2016 <- data.frame(cbind(box4$x,box4$y))
+colnames(box2016) <- c("x","y")
+box2016.y <- max(box2016[,"y"]) #extract optimal lambda y value
+lambda.vals <- box2016[box2016$y==box2016.y,] ## match with lambda value
+lambda <- lambda.vals[,1]
+
+Biomass.trans <- ((open.2016$Biomass^lambda)-1)/lambda
+m4 <- lm(Biomass.trans~SWC.initial, data=open.2016)
+
+
+plot(shrub.2016$SWC.initial, shrub.2016$Biomass.trans, pch=19,xlim=c(8,50), ylim=c(-2,6), ylab="", xlab="soil moisture (%)", cex.axis=1.5, cex.lab=1.8)
+points(open.2016$SWC.initial, open.2016$Biomass.trans, pch=21, bg="Grey80")
+m3 <- lm(Biomass.trans~SWC.initial, data=shrub.2016)
+abline(m3, lwd=4)
+m4 <- lm(Biomass.trans~SWC.initial, data=open.2016)
+text(10,6, "2016", cex=1.5)
+legend(10,-1.0, c("shrub","open"), pch=21, pt.bg=c("Black","Grey80"), cex=1.3)
+#abline(m4, lwd=2, lty=3)
+
+```
+
+### Species richness and plant abundance
+``` {r echo=FALSE, message=FALSE, warning=FALSE}
+## compare abundance and richness
+
+m1 <- glm.nb(abundance ~ Microsite * Exclosure * SWC.initial, data=dat2014)
+m2 <- glm.nb(abundance ~ Microsite * Exclosure * SWC.initial, data=dat2016)
+
+m3 <- glm.nb(richness ~ Microsite * Exclosure * SWC.initial, data=dat2014)
+m4 <- glm.nb(richness ~ Microsite * Exclosure * SWC.initial, data=dat2016)
+
+#summary(m1)
+#summary(m2)
+#summary(m3)
+#summary(m4)
+
+anova(m1)
+anova(m2)
+anova(m3)
+anova(m4)
+```
+
+### Interactions among annuals with consumer pressure and soil moisture
+``` {r echo=FALSE, message=FALSE, warning=FALSE, fig.width=10, fig.height=6}
+## brome analyses
+
+m1 <- glm.nb(brome ~ Microsite * Exclosure * SWC.initial, data=dat2014)
+m2 <- glm.nb(nbrome ~ Microsite * Exclosure * SWC.initial, data=dat2014)
+
+m3 <- glm.nb(brome ~ Microsite * Exclosure * SWC.initial, data=dat2016)
+m4 <- glm.nb(nbrome ~ Microsite * Exclosure * SWC.initial, data=dat2016)
+
+## converting species into a factor
+data2 <- rbind(data,data)
+abundance2 <- c(data$brome,data$nbrome)
+species <- c(rep("brome", length(data[,1])),rep("nbrome", length(data[,1])))
+data2["species"] <- species
+data2["abundance2"] <- abundance2
+
+par(mfrow=c(1,2))
+par(mar=c(4.5,4.5,0.5,0.5))
+
+## species vs microsite 2014
+data214 <- subset(data2, Year=="2014")
+
+means <- aggregate(data214, by=list(micro=data214$Microsite, species=data214$species), mean)
+ses <- aggregate(data214, by=list(micro=data214$Microsite, species=data214$species), se)
+
+interaction.plot(data214$Microsite, data214$species, data214$abundance2, ylab="plant abundance",xlab="Microsite", ylim=c(0,140), legend=F, cex.axis=1.5,cex.lab=1.8, lwd=3)
+error.bar(c(1,2),means[means["species"]=="brome","abundance2"],ses[ses["species"]=="brome","abundance2"], lwd=2)
+points(c(1,2),means[means["species"]=="brome","abundance2"], pch=21, bg="Grey80", cex=1.8)
+error.bar(c(1,2),means[means["species"]=="nbrome","abundance2"],ses[ses["species"]=="nbrome","abundance2"], lwd=2)
+points(c(1,2),means[means["species"]=="nbrome","abundance2"], pch=21, bg="Black", cex=1.8)
+text(1, 140, c("2014"), cex=1.5)
+
+## species vs microsite 2014
+data216 <- subset(data2, Year=="2016")
+
+means <- aggregate(data216, by=list(micro=data216$Microsite, species=data216$species), mean)
+ses <- aggregate(data216, by=list(micro=data216$Microsite, species=data216$species), se)
+
+interaction.plot(data216$Microsite, data216$species, data216$abundance2, ylab="plant abundance",xlab="Microsite", ylim=c(0,140), legend=F, cex.axis=1.5,cex.lab=1.8, lwd=3)
+error.bar(c(1,2),means[means["species"]=="brome","abundance2"],ses[ses["species"]=="brome","abundance2"], lwd=2)
+points(c(1,2),means[means["species"]=="brome","abundance2"], pch=21, bg="Grey80", cex=1.8)
+error.bar(c(1,2),means[means["species"]=="nbrome","abundance2"],ses[ses["species"]=="nbrome","abundance2"], lwd=2)
+points(c(1,2),means[means["species"]=="nbrome","abundance2"], pch=21, bg="Black", cex=1.8)
+legend(1,20, c("subordinates",expression(italic("B. madritensis"))), pch=21, pt.bg=c("Black","Grey80"), cex=1.3)
+text(1, 140, c("2016"), cex=1.5)
+
+
+##pairwise comparisons
+
+m5 <- glm.nb(abundance2~species *Microsite, data=subset(data2, Year=="2014"))
+m6 <- glm.nb(abundance2~species *Microsite, data=subset(data2, Year=="2016"))
+
+anova(m5)
+anova(m6)
+
+
+lsmeans(m5, pairwise~Microsite * species, adjust="tukey")
+lsmeans(m6, pairwise~Microsite * species, adjust="tukey")
+```
+
+### Permutation RII to compare among effects and years
+``` {r echo=FALSE, message=FALSE, warning=FALSE, results='hide'}
+
+## permutation RII to compare effects
+
+perm.rii <- function(x, treatment, control.var, treat.var, variable,perm){
+s1 <- subset(x, x[,treatment] == treat.var, select=variable) ## subset the treatment group
+o1 <- subset(x, x[,treatment] == control.var, select=variable)  ## subset the control group
+min.samp <- min(length(s1[,1]),length(o1[,1]))  ## minimum number of samples
+rii.avg.total <- c() ## set up blank mean vector
+rii.se.total <- c() ## set up blank mean vector
+for (i in 1:perm){ ##loop the sampling of treatment and control groups and calculate RII
+set.seed(i) ## control randomization to return same values
+treat.samp<- sample(s1[,variable],min.samp)
+control.samp<-sample(o1[,variable],min.samp)
+return1 <- (treat.samp - control.samp) / (treat.samp+control.samp)
+rii.avg <- mean(return1)
+rii.se <- se(return1)
+rii.avg.total <- c(rii.avg.total,rii.avg) ## bind all the means together
+rii.se.total <- c(rii.se.total,rii.se) ## bind all the confidence intervals together
+}
+rii.avg <- mean(rii.avg.total)
+rii.se <- mean(rii.se.total)
+treat <- c(treatment)
+rii.results <- data.frame(factor=treat,average=rii.avg,error=rii.se)
+print(rii.results)
+}
+
+## 2014
+consumer2014 <- perm.rii(dat2014, treatment="Exclosure", control.var="N", treat.var="Y", variable="Biomass", 999) ## consumer
+microsite2014 <- perm.rii(dat2014, treatment="Microsite", control.var="Open", treat.var="Shrub", variable="Biomass", 999) ## microsite
+water2014 <- perm.rii(dat2014, treatment="Watered", control.var="N", treat.var="Y", variable="Biomass", 999) ## water
+
+## 2016
+consumer2016 <- perm.rii(dat2016, treatment="Exclosure", control.var="N", treat.var="Y", variable="Biomass", 999) ## consumer
+microsite2016 <- perm.rii(dat2016, treatment="Microsite", control.var="Open", treat.var="Shrub", variable="Biomass", 999) ## microsite
+water2016 <- perm.rii(dat2016, treatment="Watered", control.var="N", treat.var="Y", variable="Biomass", 999) ## water
+
+rii.vals <- rbind(consumer2014,microsite2014,water2014,consumer2016,microsite2016,water2016)
+rii.vals[,"Year"] <- c(rep("2014",3),rep("2016",3))
+
+# xax <- seq(1,6,1)
+# par(mar=c(4.5,4.5,0.5,0.5))
+# plot(xax,rii.vals[,"average"], pch=19, ylim=c(-0.2,0.8), ylab="RII Biomass", xlab="", xaxt="n", cex=1.5, cex.axis=1.5, cex.lab=1.5)
+# error.bar(xax,rii.vals[,"average"],rii.vals[,"error"])
+# text(2, 0.8, c("2014"), cex=1.8)
+# text(5, 0.8, c("2016"), cex=1.8)
+# abline(h=0, lty=2, lwd=2)
+# abline(v=3.5, lwd=2)
+# axis(1, xax, c("exclosure","shrub","water","exclosure","shrub","water"), cex.axis=1.5)
+
+
+## compare effects between groups
+perm.rii <- function(x, treatment, control.var, treat.var, variable,perm){
+s1 <- subset(x, x[,treatment] == treat.var, select=variable) ## subset the treatment group
+o1 <- subset(x, x[,treatment] == control.var, select=variable)  ## subset the control group
+min.samp <- min(length(s1[,1]),length(o1[,1]))  ## minimum number of samples
+rii.avg.total <- c() ## set up blank mean vector
+rii.se.total <- c() ## set up blank mean vector
+for (i in 1:perm){ ##loop the sampling of treatment and control groups and calculate RII
+set.seed(i) ## control randomization to return same values
+treat.samp<- sample(s1[,variable],min.samp)
+control.samp<-sample(o1[,variable],min.samp)
+return1 <- (treat.samp - control.samp) / (treat.samp+control.samp)
+rii.avg <- mean(return1)
+rii.se <- se(return1)
+rii.avg.total <- c(rii.avg.total,rii.avg) ## bind all the means together
+rii.se.total <- c(rii.se.total,rii.se) ## bind all the confidence intervals together
+}
+rii.avg <- mean(rii.avg.total)
+rii.se <- mean(rii.se.total)
+treat <- c(treatment)
+rii.results <- data.frame(factor=treat,average=rii.avg,error=rii.se)
+print(rii.avg.total)
+}
+
+
+## 2014
+consumer2014 <- perm.rii(dat2014, treatment="Exclosure", control.var="N", treat.var="Y", variable="Biomass", 999) ## consumer
+microsite2014 <- perm.rii(dat2014, treatment="Microsite", control.var="Open", treat.var="Shrub", variable="Biomass", 999) ## microsite
+water2014 <- perm.rii(dat2014, treatment="Watered", control.var="N", treat.var="Y", variable="Biomass", 999) ## water
+
+## 2016
+consumer2016 <- perm.rii(dat2016, treatment="Exclosure", control.var="N", treat.var="Y", variable="Biomass", 999) ## consumer
+microsite2016 <- perm.rii(dat2016, treatment="Microsite", control.var="Open", treat.var="Shrub", variable="Biomass", 999) ## microsite
+water2016 <- perm.rii(dat2016, treatment="Watered", control.var="N", treat.var="Y", variable="Biomass", 999) ## water
+
+conf95 <- function(x) {quantile(x, probs = c(0.025,0.975))} ## calculate confidence interval
+conf95.boot <- rbind(conf95(consumer2014),conf95(microsite2014),conf95(water2014),conf95(consumer2016),conf95(microsite2016),conf95(water2016))
+rownames(conf95.boot) <- c("consumer2014","microsite2014","water2014","consumer2016","microsite2016","water2016")
+
+## extend confidence bars for microsite
+conf95.boot[2,1] <- conf95.boot[2,1]-0.01
+conf95.boot[2,2] <- conf95.boot[2,2]+0.01
+conf95.boot[5,1] <- conf95.boot[5,1]-0.01
+conf95.boot[5,2] <- conf95.boot[5,2]+0.01
+```
+
+```{r echo=FALSE}
+
+## plot differences
+
+xax <- seq(1,6,1)
+par(mar=c(4.5,4.5,0.5,0.5))
+plot(xax,rii.vals[,"average"], pch=19, ylim=c(-0.2,0.8), ylab="RII Biomass", xlab="", xaxt="n", cex=1.3, cex.axis=1.3, cex.lab=1.5)
+arrows(xax,conf95.boot[,2], xax, conf95.boot[,1], angle=90, code=3, length=0, lwd=2)
+text(2, 0.8, c("2014"), cex=1.5)
+text(5, 0.8, c("2016"), cex=1.5)
+abline(h=0, lty=2, lwd=2)
+abline(v=3.5, lwd=1)
+axis(1, xax, c("exclosure","shrub","water","exclosure","shrub","water"), cex.axis=1.3)
+```
