@@ -403,3 +403,75 @@ abline(h=0, lty=2, lwd=2)
 abline(v=3.5, lwd=1)
 axis(1, xax, c("exclosure","shrub","water","exclosure","shrub","water"), cex.axis=1.3)
 ```
+
+### Rii Frequency Counts
+```{r, rii.frequency}
+rii<-read.csv("rii.csv")
+str(rii)
+
+count.zero <- function(x) {
+count = 0 
+for(i in 1:length(x)) 
+{
+if(x[i] == 0)
+{
+count = count + 1
+}
+}
+return(count)
+}
+
+count.positive <- function(x) {
+count = 0 
+for(i in 1:length(x)) 
+{
+if(x[i] > 0)
+{
+count = count + 1
+}
+}
+return(count)
+}
+
+count.negative <- function(x) {
+count = 0 
+for(i in 1:length(x)) 
+{
+if(x[i] < 0)
+{
+count = count + 1
+}
+}
+return(count)
+}
+
+#quick net counts
+neutrals <-count.zero(rii$Biomass)
+negatives <-count.negative(rii$Biomass)
+positives <-count.positive(rii$Biomass)
+rii.counts<-c(neutrals, negatives, positives)
+barplot(rii.counts)
+
+#rii.freq rules: if <0.01 = 0, all others -1 or +1
+boxplot(rii$rii.freq~rii$Gradient)
+c1<-chisq.test(rii$rii.freq, rii$Gradient, simulate.p.value = TRUE, B = 10000)
+c1
+
+rii$Year <-as.factor(rii$Year)
+rii$Gradient <-as.factor(rii$Gradient)
+library(ggplot2)
+qplot(Gradient, rii.freq, data=rii, geom="boxplot", facets = Year~.)
+
+#so based on qplot, in 2016 you did not have 6 levels. so should treat 2014 as only test for water gradient?
+
+#so subset out 2014 to test SGH with water addition
+library(dplyr)
+yr.2014 <-rii %>% filter(Year == "2014")
+c3<-chisq.test(yr.2014$rii.freq, yr.2014$Gradient, simulate.p.value = TRUE, B = 10000)
+c3
+
+#LOL - no support for SGH still
+
+
+
+```
