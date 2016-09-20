@@ -1,6 +1,6 @@
 ---
 title:
-author: "fitz90"
+author: "fitz90 and cjlortie"
 date: "June 2016"
 output:
   html_document:
