@@ -1,6 +1,6 @@
 ---
 title:
-author: "fitz90 and cjlortie"
+author: "Alex Filazzola and cjlortie"
 date: "June 2016"
 output:
   html_document:
@@ -475,3 +475,54 @@ c3
 
 
 ```
+
+### Structural Equation Model (SEM)
+```{r echo=FALSE, message=FALSE, warning=FALSE}
+
+###SEM
+library(lavaan)
+
+
+## need to code categorical data as ordinal (1/0 for shrub and open)
+micros <- factor(data$Microsite)
+micros <- as.numeric(micros)-1
+consumers <- factor(data$Exclosure)
+consumers <- as.numeric(consumers)-1
+data[,"micros"] <- micros
+data[,"consumer"] <- consumers
+
+brome.dom <- data$brome/data$abundance ## a measurement of brome dominance
+data[,"brome.dom"] <- brome.dom
+
+
+## specify model. Predictors, responses and latent variables
+mymodel <- '
+# latent variable
+community =~ Biomass + abundance + brome.dom
+
+# regressions
+community ~ consumer
+community ~ micros
+community ~ SWC.initial
+'
+
+## fit model
+fit1 <- sem(mymodel, data = subset(data, Year==2014), estimator = "ML", std.lv=TRUE, se="bootstrap", test="bootstrap")
+fit2 <- sem(mymodel, data = subset(data, Year==2016), estimator = "ML", std.lv=TRUE , se="bootstrap", test="bootstrap")
+
+
+##summarize results
+#summary(fit1)
+#summary(fit2)
+
+summary(fit1, standardized=TRUE, rsq=T)
+summary(fit2, standardized=TRUE, rsq=T)
+
+
+## plot resutls using semPaths function in qgraph
+#library(qgraph)
+library(semPlot)
+
+par(mfrow=c(1,2))
+semPaths(fit1, "std", edge.label.cex=1, curve.Pivot=TRUE)
+semPaths(fit2, "std", edge.label.cex=1, curve.Pivot=TRUE)
