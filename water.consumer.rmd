@@ -50,6 +50,10 @@ return2
 ## load libraries
 library(MASS)
 library(lsmeans)
+library(dplyr)
+library(ggplot2)
+library(tidyr)
+library(gridExtra)
 ```
 
 ### Consumer pressure, soil moisture, and shrub interactions
@@ -409,69 +413,45 @@ axis(1, xax, c("exclosure","shrub","water","exclosure","shrub","water"), cex.axi
 rii<-read.csv("rii.csv")
 str(rii)
 
-count.zero <- function(x) {
-count = 0 
-for(i in 1:length(x)) 
-{
-if(x[i] == 0)
-{
-count = count + 1
-}
-}
-return(count)
-}
-
-count.positive <- function(x) {
-count = 0 
-for(i in 1:length(x)) 
-{
-if(x[i] > 0)
-{
-count = count + 1
-}
-}
-return(count)
+interact.sign <- c()
+freq.interact <- function(x){
+  for (i in 1:length(x)){
+  if(x[i] > 0)
+    interact.sign[i] <- 1
+  else if(x[i] == 0)
+    interact.sign[i] <- 0
+    else
+      interact.sign[i] <- -1
+  }
+  return(interact.sign)
 }
 
-count.negative <- function(x) {
-count = 0 
-for(i in 1:length(x)) 
-{
-if(x[i] < 0)
-{
-count = count + 1
-}
-}
-return(count)
-}
+rii[,"sign"] <- freq.interact(rii$Biomass)
 
-#quick net counts
-neutrals <-count.zero(rii$Biomass)
-negatives <-count.negative(rii$Biomass)
-positives <-count.positive(rii$Biomass)
-rii.counts<-c(neutrals, negatives, positives)
-barplot(rii.counts)
+sum.freq <- rii %>% group_by(Year, Gradient) %>% summarize(positive=sum(sign>0),negative=sum(sign<0)*-1,net=positive+negative)
 
-#rii.freq rules: if <0.01 = 0, all others -1 or +1
-boxplot(rii$rii.freq~rii$Gradient)
-c1<-chisq.test(rii$rii.freq, rii$Gradient, simulate.p.value = TRUE, B = 10000)
-c1
+sum.freq2 <- sum.freq %>% gather(sign, frequency, c(-Gradient, -Year))
 
-rii$Year <-as.factor(rii$Year)
-rii$Gradient <-as.factor(rii$Gradient)
-library(ggplot2)
-qplot(Gradient, rii.freq, data=rii, geom="boxplot", facets = Year~.)
 
-#so based on qplot, in 2016 you did not have 6 levels. so should treat 2014 as only test for water gradient?
+sum.freq2 <- data.frame(sum.freq2)
+freq2014 <- subset(sum.freq2, Year==2014)
+freq2016 <- subset(sum.freq2, Year==2016)
 
-#so subset out 2014 to test SGH with water addition
-library(dplyr)
-yr.2014 <-rii %>% filter(Year == "2014")
-c3<-chisq.test(yr.2014$rii.freq, yr.2014$Gradient, simulate.p.value = TRUE, B = 10000)
-c3
+chisq.test(freq2014[freq2014$sign=="net","frequency"]) ## test for differences among gradients - N.S.
 
-#LOL - no support for SGH still
+plot1 <- ggplot(freq2014, aes(Gradient, frequency)) + geom_bar(aes(fill=sign), position="dodge", stat="identity") + scale_fill_grey() + coord_cartesian(ylim = c(-20, 35))+ theme_classic()+ theme(legend.position="none") + geom_hline(yintercept=0, linetype=2)
+plot2 <- ggplot(freq2016, aes(Gradient, frequency)) + geom_bar(aes(fill=sign), position="dodge", stat="identity") + scale_fill_grey() + coord_cartesian(ylim = c(-20, 35), xlim=c(-1,2))+ theme_classic()+ geom_hline(yintercept=0, linetype=2)
 
+
+grid.arrange(plot1,plot2, ncol=2)
+
+means.water <- rii %>% group_by(Year, Gradient) %>% summarize(mean.bio=mean(Biomass),se.bio=se(Biomass))
+
+water2014 <- subset(means.water, Year==2014)
+water2016 <- subset(means.water, Year==2016)
+
+water2014 <- subset(rii, Year==2014)
+ggplot(water2014, aes(factor(Gradient), Biomass)) + geom_boxplot()+ coord_cartesian(ylim = c(-0.2, 1))+ theme_classic()+ theme(legend.position="none") 
 
 
 ```
