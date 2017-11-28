@@ -1,21 +1,21 @@
-sheet.name,data,column,description
-Gradient.data.2014_2016,census data in paper,ShrubID,shrub number that has been geo-referenced
-Gradient.data.2014_2016,census data in paper,Year,survey year (2014 or 2016)
-Gradient.data.2014_2016,census data in paper,Microsite,plot microsite (shrub or open)
-Gradient.data.2014_2016,census data in paper,Exclosure,presence of animal exclosure (yes or no)
-Gradient.data.2014_2016,census data in paper,Gradient,applied water gradient for each given year
-Gradient.data.2014_2016,census data in paper,Watered,whether water was applied to plot or not (yes or no)
-Gradient.data.2014_2016,census data in paper,Rep,replicate
-Gradient.data.2014_2016,census data in paper,D1,longest dimension of shrub measured in centimeters
-Gradient.data.2014_2016,census data in paper,D2,dimension immediately perpendicular to D1 measured in centimeters
-Gradient.data.2014_2016,census data in paper,H,
-Gradient.data.2014_2016,census data in paper,Volume,
-Gradient.data.2014_2016,census data in paper,Area,
-Gradient.data.2014_2016,census data in paper,Canopy,
-Gradient.data.2014_2016,census data in paper,abundance,
-Gradient.data.2014_2016,census data in paper,richness,
-Gradient.data.2014_2016,census data in paper,SWC.initial,
-Gradient.data.2014_2016,census data in paper,SWC.end,
-Gradient.data.2014_2016,census data in paper,Biomass,
-Gradient.data.2014_2016,census data in paper,brome,
-Gradient.data.2014_2016,census data in paper,nbrome,
+data,column,description
+census data in paper,ShrubID,shrub number that has been geo-referenced
+census data in paper,Year,survey year (2014 or 2016)
+census data in paper,Microsite,plot microsite (shrub or open)
+census data in paper,Exclosure,presence of animal exclosure (yes or no)
+census data in paper,Gradient,applied water gradient for each given year
+census data in paper,Watered,whether water was applied to plot or not (yes or no)
+census data in paper,Rep,replicate
+census data in paper,D1,longest dimension of shrub measured in centimeters
+census data in paper,D2,dimension immediately perpendicular to D1 measured in centimeters
+census data in paper,H,height of surveyed shrub measured in centimeteres
+census data in paper,Volume,volume of shrub calculated using dimensions and equation of a semi-sphere
+census data in paper,Area,area of a shrub calculated using dimensions and equation for a circle
+census data in paper,Canopy,a visual estimate of shrub decadence based on a Likert scale of 0-10
+census data in paper,abundance,number of annual plants counted within a shrub or open microsite in a 50 cm by 50 cm quadrat
+census data in paper,richness,number of difference species counted within a shrub or open microsite in a 50 cm by 50 cm quadrat
+census data in paper,SWC.initial,soil moisture (%) measuring at the beginning of the growing season using a Delta SM150 soil moisture probe
+census data in paper,SWC.end,soil moisture (%) measuring at the end of the growing season using a Delta SM150 soil moisture probe
+census data in paper,Biomass,the dried collected biomass of all plants within a 10 diameter circle in the center of the survey plot
+census data in paper,brome,number of Bromus madritensis plants counted within a shrub or open microsite in a 50 cm by 50 cm quadrat
+census data in paper,nbrome,number of plants other than Bromus madritensis plants counted within a shrub or open microsite in a 50 cm by 50 cm quadrat
