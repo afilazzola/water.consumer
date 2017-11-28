@@ -25,7 +25,7 @@ knitr::opts_chunk$set(echo = TRUE)
 ``` {r echo=FALSE, message=FALSE, warning=FALSE}
 ## load data
 
-data <- read.table("Gradient.data.2014_2016.csv", header=T, sep=",")
+data <- read.table("data/Gradient.data.2014_2016.csv", header=T, sep=",")
 data[is.na(data)] <- 0
 
 ## load functions
@@ -410,7 +410,7 @@ axis(1, xax, c("exclosure","shrub","water","exclosure","shrub","water"), cex.axi
 
 ### Rii Frequency Counts
 ```{r, rii.frequency}
-rii<-read.csv("rii.csv")
+rii<-read.csv("data/rii.csv")
 str(rii)
 
 interact.sign <- c()
